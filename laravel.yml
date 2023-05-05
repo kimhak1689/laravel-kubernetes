@@ -1,0 +1,69 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: laravel-config
+data:
+  APP_NAME: "My Laravel App"
+  APP_ENV: "production"
+  APP_KEY: "base64:u8+jV5oZJ5p7+5rW3j8/e2IXw0tQ..."
+  APP_DEBUG: "false"
+  APP_URL: "http://example.com"
+
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: laravel-pv
+spec:
+  storageClassName: manual
+  capacity:
+    storage: 1Gi
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: /data/laravel
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: laravel-app
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: laravel-app
+  template:
+    metadata:
+      labels:
+        app: laravel-app
+    spec:
+      containers:
+      - name: laravel-container
+        image: your-laravel-image
+        ports:
+        - containerPort: 80
+        volumeMounts:
+        - name: laravel-storage
+          mountPath: /var/www/storage
+        envFrom:
+        - configMapRef:
+            name: laravel-config
+      volumes:
+      - name: laravel-storage
+        persistentVolumeClaim:
+          claimName: laravel-pvc
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: laravel-service
+spec:
+  type: ClusterIP
+  selector:
+    app: laravel-app
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 80
